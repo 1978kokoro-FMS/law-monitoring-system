@@ -233,30 +233,65 @@ async function searchLawAPI() {
 
         const parser = new DOMParser();
         const doc = parser.parseFromString(xml, 'text/xml');
-        const laws = Array.from(doc.getElementsByTagName('law')).map(el => {
-            const get = (tag) => el.getElementsByTagName(tag)[0]?.textContent?.trim() || '';
-            return {
-                law_id:       get('법령ID'),
-                law_name:     get('법령명한글'),
-                law_type:     get('법령구분명'),
-                ministry:     get('소관부처명'),
-                enacted_date: get('공포일자'),
-                serial_no:    get('법령일련번호'),
-            };
-        });
 
-        if (laws.length === 0) {
-            container.innerHTML = '<p style="color:var(--gray-500);padding:12px">검색 결과가 없습니다.</p>';
+        // target별로 다른 XML 태그 파싱
+        let items = [];
+        if (target === 'law') {
+            items = Array.from(doc.getElementsByTagName('law')).map(el => {
+                const g = tag => el.getElementsByTagName(tag)[0]?.textContent?.trim() || '';
+                return {
+                    law_id:       g('법령ID'),
+                    law_name:     g('법령명한글'),
+                    law_type:     g('법령구분명'),
+                    ministry:     g('소관부처명'),
+                    enacted_date: g('공포일자'),
+                    serial_no:    g('법령일련번호'),
+                };
+            });
+        } else if (target === 'admrul') {
+            items = Array.from(doc.getElementsByTagName('admrul')).map(el => {
+                const g = tag => el.getElementsByTagName(tag)[0]?.textContent?.trim() || '';
+                return {
+                    law_id:       g('행정규칙ID'),
+                    law_name:     g('행정규칙명'),
+                    law_type:     g('행정규칙종류명') || g('행정규칙종류'),
+                    ministry:     g('소관부처명'),
+                    enacted_date: g('발령일자') || g('공포일자'),
+                    serial_no:    g('일련번호'),
+                };
+            });
+        } else if (target === 'ordin') {
+            items = Array.from(doc.getElementsByTagName('ordin')).map(el => {
+                const g = tag => el.getElementsByTagName(tag)[0]?.textContent?.trim() || '';
+                return {
+                    law_id:       g('자치법규 ID') || g('자치법규번호'),
+                    law_name:     g('자치법규명'),
+                    law_type:     g('자치법규종류명'),
+                    ministry:     g('자치단체명'),
+                    enacted_date: g('공포일자') || g('발령일자'),
+                    serial_no:    g('일련번호'),
+                };
+            });
+        }
+
+        if (items.length === 0) {
+            container.innerHTML = `
+                <div style="margin-top:12px;background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:14px">
+                    <p style="color:#92400e;font-weight:600;margin-bottom:6px">검색 결과 없음</p>
+                    <p style="font-size:0.83rem;color:#78350f">검색어를 확인하거나 ✉️ 직접 추가 버튼으로 등록하세요.</p>
+                    <button onclick="openAddLawModal()" class="btn btn-success btn-sm" style="margin-top:8px">✏️ 직접 추가</button>
+                </div>`;
             return;
         }
 
+        const targetLabel = { law: '법령', admrul: '행정규칙', ordin: '자치법규' }[target];
         container.innerHTML = `
-            <div style="margin-top:12px;font-size:0.85rem;color:var(--gray-500);margin-bottom:8px">${laws.length}건 검색됨</div>
-            ${laws.map((l) => `
+            <div style="margin-top:12px;font-size:0.85rem;color:var(--gray-500);margin-bottom:8px">${targetLabel} ${items.length}건 검색됨</div>
+            ${items.map(l => `
                 <div class="law-item">
                     <div class="law-item-info">
                         <h4>${utils.escapeHtml(l.law_name)}</h4>
-                        <p>${l.ministry || '-'} · ${l.law_type || '-'} · 공포일: ${utils.formatDate(l.enacted_date)}</p>
+                        <p>${l.ministry || '-'} · ${l.law_type || '-'} · 발령일: ${utils.formatDate(l.enacted_date)}</p>
                     </div>
                     <div class="law-item-actions">
                         <button onclick='addToMonitoring(${JSON.stringify(l).replace(/'/g,"&apos;")})' class="btn btn-success btn-sm">➕ 추가</button>
@@ -267,8 +302,7 @@ async function searchLawAPI() {
     } catch(e) {
         container.innerHTML = `
             <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:14px;margin-top:12px">
-                <p style="color:var(--danger);font-weight:600;margin-bottom:8px">🚫 검색 연결 실패</p>
-                <p style="font-size:0.83rem;color:#7f1d1d;margin-bottom:12px">외부 네트워크 문제로 일시적으로 검색이 되지 않습니다.<br>✅ 직접 추가 버튼으로 수동 등록하실 수 있습니다.</p>
+                <p style="color:var(--danger);font-weight:600;margin-bottom:8px">🚫 검색 실패: ${e.message}</p>
                 <button onclick="openAddLawModal()" class="btn btn-success btn-sm">✏️ 직접 추가하기</button>
             </div>`;
     } finally {
