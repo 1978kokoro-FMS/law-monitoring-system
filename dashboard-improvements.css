@@ -1,0 +1,192 @@
+/* 대시보드 개선 스타일 */
+
+/* 통계 카드 개선 */
+.stat-item {
+    background: linear-gradient(135deg, #f8fafc 0%, white 100%);
+    padding: 25px;
+    border-radius: 12px;
+    text-align: center;
+    border: 2px solid #e2e8f0;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border-color: #2563eb;
+}
+
+.stat-item::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    opacity: 0.8;
+}
+
+.stat-value {
+    font-size: 3rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #2563eb 0%, #0891b2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.stat-label {
+    font-size: 0.95rem;
+    color: #64748b;
+    font-weight: 500;
+    position: relative;
+    z-index: 1;
+}
+
+/* 모니터링 법령 카드 개선 */
+.monitoring-law-card {
+    background: linear-gradient(135deg, #ecfdf5 0%, white 100%);
+    border-left: 4px solid #16a34a;
+    padding: 18px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.monitoring-law-card:hover {
+    transform: translateX(8px);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
+}
+
+.law-card-icon {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    background: #16a34a;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    margin-right: 12px;
+    float: left;
+}
+
+/* 변경사항 카드 개선 */
+.change-card {
+    background: linear-gradient(135deg, #fef3c7 0%, white 100%);
+    border-left: 4px solid #ea580c;
+    padding: 18px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.change-card:hover {
+    transform: translateX(8px);
+    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.15);
+}
+
+/* 긴급 조치 카드 개선 */
+.urgent-action-card {
+    background: linear-gradient(135deg, #fee2e2 0%, white 100%);
+    border-left: 4px solid #dc2626;
+    padding: 18px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.urgent-action-card:hover {
+    transform: translateX(8px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+}
+
+/* 액션 버튼 강조 */
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid currentColor;
+    color: #2563eb;
+}
+
+.btn-outline:hover {
+    background: #2563eb;
+    color: white;
+}
+
+/* 개정 내용 버튼 (AI 전단계) */
+.btn-revision {
+    background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+    color: white;
+    border: none;
+    box-shadow: 0 2px 8px rgba(8, 145, 178, 0.3);
+}
+
+.btn-revision:hover {
+    background: linear-gradient(135deg, #0e7490 0%, #0891b2 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(8, 145, 178, 0.4);
+}
+
+/* 섹션 헤더 개선 */
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.section-icon {
+    font-size: 1.5rem;
+}
+
+.section-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+/* 빈 상태 개선 */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #94a3b8;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+.empty-state-text {
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+}
+
+.empty-state-action {
+    margin-top: 20px;
+}

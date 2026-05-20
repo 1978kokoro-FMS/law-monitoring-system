@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>법령 모니터링 시스템</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* ── 추가 스타일 ── */
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #3730a3;
+            --success: #16a34a;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-500: #64748b;
+            --gray-700: #334155;
+            --gray-900: #0f172a;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--gray-100); color: var(--gray-700); }
+
+        /* 헤더 */
+        .app-header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white; padding: 16px 24px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 12px rgba(79,70,229,0.3);
+        }
+        .app-header h1 { font-size: 1.4rem; font-weight: 700; }
+        .app-header .header-sub { font-size: 0.8rem; opacity: 0.8; margin-top: 2px; }
+        .header-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .quarter-badge {
+            background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);
+            padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;
+        }
+
+        /* 탭 */
+        .tab-nav {
+            background: white; border-bottom: 2px solid var(--gray-200);
+            display: flex; overflow-x: auto; padding: 0 16px;
+        }
+        .tab-btn {
+            padding: 14px 20px; border: none; background: none; cursor: pointer;
+            font-size: 0.9rem; font-weight: 600; color: var(--gray-500);
+            border-bottom: 3px solid transparent; margin-bottom: -2px;
+            white-space: nowrap; transition: all 0.2s;
+        }
+        .tab-btn:hover { color: var(--primary); }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        /* 탭 콘텐츠 */
+        .tab-content { display: none; padding: 24px; max-width: 1200px; margin: 0 auto; }
+        .tab-content.active { display: block; }
+
+        /* 카드 */
+        .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); }
+        .card-title { font-size: 1.1rem; font-weight: 700; color: var(--gray-900); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        /* 통계 카드 */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .stat-card {
+            background: white; border-radius: 12px; padding: 20px;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.08); border-left: 4px solid var(--primary);
+        }
+        .stat-card.green { border-left-color: var(--success); }
+        .stat-card.orange { border-left-color: var(--warning); }
+        .stat-card.red { border-left-color: var(--danger); }
+        .stat-label { font-size: 0.8rem; color: var(--gray-500); margin-bottom: 8px; }
+        .stat-value { font-size: 2rem; font-weight: 800; color: var(--gray-900); }
+        .stat-sub { font-size: 0.75rem; color: var(--gray-500); margin-top: 4px; }
+
+        /* 버튼 */
+        .btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 600; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #15803d; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-secondary { background: var(--gray-200); color: var(--gray-700); }
+        .btn-secondary:hover { background: var(--gray-500); color: white; }
+        .btn-outline { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.4); }
+        .btn-outline:hover { background: rgba(255,255,255,0.25); }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+        .btn-xs { padding: 4px 8px; font-size: 0.75rem; }
+
+        /* 섹션 헤더 */
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+        .section-title { font-size: 1rem; font-weight: 700; color: var(--gray-900); }
+
+        /* 폼 */
+        .form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 150px; }
+        .form-group label { font-size: 0.8rem; font-weight: 600; color: var(--gray-700); }
+        .form-control { padding: 8px 12px; border: 1.5px solid var(--gray-200); border-radius: 8px; font-size: 0.875rem; outline: none; width: 100%; }
+        .form-control:focus { border-color: var(--primary); }
+
+        /* 검색 결과 / 목록 */
+        .law-item {
+            background: var(--gray-50); border: 1.5px solid var(--gray-200); border-radius: 10px;
+            padding: 14px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
+            gap: 12px; flex-wrap: wrap;
+        }
+        .law-item-info h4 { font-size: 0.95rem; font-weight: 700; color: var(--gray-900); margin-bottom: 4px; }
+        .law-item-info p { font-size: 0.8rem; color: var(--gray-500); }
+        .law-item-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+        /* 배지 */
+        .badge { padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-primary { background: #e0e7ff; color: #3730a3; }
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .badge-gray { background: var(--gray-200); color: var(--gray-700); }
+
+        /* 점검 목록 */
+        .inspection-card {
+            border: 1.5px solid var(--gray-200); border-radius: 10px; padding: 16px 20px;
+            margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
+            gap: 12px; flex-wrap: wrap; cursor: pointer; transition: all 0.2s;
+        }
+        .inspection-card:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(79,70,229,0.15); }
+        .inspection-card.completed { border-color: var(--success); background: #f0fdf4; }
+        .inspection-card-title { font-size: 1rem; font-weight: 700; color: var(--gray-900); }
+        .inspection-card-meta { font-size: 0.8rem; color: var(--gray-500); margin-top: 4px; }
+
+        /* 진행률 바 */
+        .progress-bar-wrap { background: var(--gray-200); border-radius: 100px; height: 6px; margin-top: 6px; }
+        .progress-bar { background: var(--primary); border-radius: 100px; height: 6px; transition: width 0.3s; }
+
+        /* 점검 항목 테이블 */
+        .inspection-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        .inspection-table th { background: var(--gray-100); padding: 10px 12px; text-align: left; font-weight: 600; color: var(--gray-700); border-bottom: 2px solid var(--gray-200); white-space: nowrap; }
+        .inspection-table td { padding: 10px 12px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+        .inspection-table tr:hover td { background: #f8f7ff; }
+        .inspection-table input, .inspection-table select, .inspection-table textarea { 
+            border: 1.5px solid var(--gray-200); border-radius: 6px; padding: 5px 8px; font-size: 0.8rem; width: 100%; outline: none;
+        }
+        .inspection-table input:focus, .inspection-table select:focus, .inspection-table textarea:focus { border-color: var(--primary); }
+
+        /* 보고서 */
+        .report-wrap { background: white; border-radius: 12px; padding: 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+        .report-header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #222; padding-bottom: 20px; }
+        .report-header h2 { font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; }
+        .report-header p { font-size: 0.9rem; color: #444; }
+        .report-info-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 0.875rem; }
+        .report-info-table td { padding: 8px 12px; border: 1px solid #ddd; }
+        .report-info-table td:first-child { background: #f5f5f5; font-weight: 600; width: 130px; }
+        .report-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 0.8rem; }
+        .report-table th { background: #1e293b; color: white; padding: 10px 8px; text-align: center; border: 1px solid #ddd; }
+        .report-table td { padding: 8px; border: 1px solid #ddd; vertical-align: middle; text-align: center; }
+        .report-table tr:nth-child(even) td { background: #f9f9f9; }
+        .report-sign { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 30px; border: 2px solid #222; }
+        .report-sign-cell { padding: 10px; text-align: center; border-right: 1px solid #222; }
+        .report-sign-cell:last-child { border-right: none; }
+        .report-sign-label { font-size: 0.8rem; font-weight: 700; margin-bottom: 30px; }
+
+        /* 모달 */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.show { display: flex; }
+        .modal-content { background: white; border-radius: 16px; padding: 28px; width: 90%; max-width: 560px; max-height: 90vh; overflow-y: auto; position: relative; }
+        .modal-content.wide { max-width: 900px; }
+        .modal-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 20px; color: var(--gray-900); }
+        .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--gray-200); }
+        .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--gray-500); }
+
+        /* 로딩 */
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 2000; display: none; align-items: center; justify-content: center; }
+        .loading-overlay.show { display: flex; }
+        .spinner { width: 40px; height: 40px; border: 4px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 빈 상태 */
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--gray-500); }
+        .empty-state .empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.5; }
+        .empty-state p { font-size: 0.95rem; }
+
+        /* 알림 */
+        .toast { position: fixed; top: 20px; right: 20px; z-index: 3000; padding: 14px 20px; border-radius: 10px; font-size: 0.875rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s ease; }
+        .toast-success { background: var(--success); color: white; }
+        .toast-error { background: var(--danger); color: white; }
+        .toast-info { background: var(--primary); color: white; }
+        @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* 테이블 래퍼 */
+        .table-wrap { overflow-x: auto; }
+
+        /* 2열 그리드 */
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+
+        /* 인쇄 스타일 */
+        @media print {
+            .app-header, .tab-nav, .tab-content:not(.active), .btn, .no-print { display: none !important; }
+            .tab-content.active { padding: 0; }
+            .report-wrap { box-shadow: none; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<header class="app-header">
+    <div>
+        <h1>⚖️ 법령 모니터링 시스템</h1>
+        <div class="header-sub">안전관리팀 · 분기별 법령 개정 점검</div>
+    </div>
+    <div class="header-right">
+        <span id="currentQuarterBadge" class="quarter-badge">-</span>
+        <button onclick="refreshCurrentTab()" class="btn btn-outline btn-sm">🔄 새로고침</button>
+        <a href="/" class="btn btn-outline btn-sm">← 안전사고 관리</a>
+    </div>
+</header>
+
+<!-- 탭 네비게이션 -->
+<nav class="tab-nav">
+    <button class="tab-btn active" data-tab="dashboard">📊 대시보드</button>
+    <button class="tab-btn" data-tab="laws">⚖️ 모니터링 법령</button>
+    <button class="tab-btn" data-tab="inspection">📅 분기점검</button>
+    <button class="tab-btn" data-tab="report">📋 보고서</button>
+    <button class="tab-btn" data-tab="admin">⚙️ 관리</button>
+</nav>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- 1. 대시보드 -->
+<!-- ═══════════════════════════════════════ -->
+<div id="dashboard" class="tab-content active">
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">⚖️ 모니터링 법령</div>
+            <div class="stat-value" id="stat-laws">-</div>
+            <div class="stat-sub">현재 등록된 법령 수</div>
+        </div>
+        <div class="stat-card green">
+            <div class="stat-label">📅 이번 분기 점검</div>
+            <div class="stat-value" id="stat-inspection">-</div>
+            <div class="stat-sub" id="stat-inspection-sub">-</div>
+        </div>
+        <div class="stat-card orange">
+            <div class="stat-label">⚠️ 미완료 조치사항</div>
+            <div class="stat-value" id="stat-pending">-</div>
+            <div class="stat-sub">조치 필요 · 진행중</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">📋 전체 점검 횟수</div>
+            <div class="stat-value" id="stat-total-inspections">-</div>
+            <div class="stat-sub">누적 분기점검 기록</div>
+        </div>
+    </div>
+
+    <div class="two-col">
+        <div class="card">
+            <div class="card-title">📅 최근 분기점검 현황</div>
+            <div id="dash-recent-inspections">
+                <div class="empty-state"><div class="empty-icon">📋</div><p>점검 이력이 없습니다</p></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">⚠️ 미완료 조치사항</div>
+            <div id="dash-pending-actions">
+                <div class="empty-state"><div class="empty-icon">✅</div><p>미완료 조치사항이 없습니다</p></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">⚖️ 모니터링 중인 법령 <span id="dash-law-count" style="font-weight:400;font-size:0.85rem;color:var(--gray-500);"></span></div>
+        <div id="dash-laws-list">
+            <div class="empty-state"><div class="empty-icon">⚖️</div><p>등록된 법령이 없습니다</p></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- 2. 모니터링 법령 관리 -->
+<!-- ═══════════════════════════════════════ -->
+<div id="laws" class="tab-content">
+    <div class="card">
+        <div class="section-header">
+            <span class="section-title">🔍 법령 검색 및 추가</span>
+            <button onclick="openAddLawModal()" class="btn btn-success btn-sm">✏️ 직접 추가</button>
+        </div>
+        <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:0.83rem;color:#92400e;">
+            ⚠️ 검색 기능은 서버(<code>node server.js</code>) 실행 중일 때만 작동합니다. 서버가 없으면 <strong>직접 추가</strong> 버튼을 이용하세요.
+        </div>
+        <div class="form-row">
+            <div class="form-group" style="flex:2">
+                <label>법령명 검색</label>
+                <input type="text" id="lawSearchInput" class="form-control" placeholder="예: 산업안전보건법, 중대재해처벌법" onkeypress="if(event.key==='Enter') searchLawAPI()">
+            </div>
+            <div class="form-group" style="flex:0 0 auto; justify-content:flex-end;">
+                <label>&nbsp;</label>
+                <button onclick="searchLawAPI()" class="btn btn-primary">🔍 검색</button>
+            </div>
+        </div>
+        <div id="lawSearchResults"></div>
+    </div>
+
+    <div class="card">
+        <div class="section-header">
+            <span class="section-title">📋 현재 모니터링 중인 법령</span>
+            <span id="monitoring-count" class="badge badge-primary">0건</span>
+        </div>
+        <div id="monitoringLawsList">
+            <div class="empty-state"><div class="empty-icon">⚖️</div><p>등록된 법령이 없습니다.<br>위에서 검색하여 추가하세요.</p></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- 3. 분기점검 -->
+<!-- ═══════════════════════════════════════ -->
+<div id="inspection" class="tab-content">
+
+    <!-- 점검 목록 화면 -->
+    <div id="inspection-list-view">
+        <div class="card">
+            <div class="section-header">
+                <span class="section-title">📅 분기점검 목록</span>
+                <button onclick="showCreateInspectionModal()" class="btn btn-primary">➕ 새 분기점검 생성</button>
+            </div>
+            <div id="inspectionList">
+                <div class="empty-state"><div class="empty-icon">📅</div><p>분기점검 이력이 없습니다.<br>"새 분기점검 생성" 버튼을 눌러 시작하세요.</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 점검 상세 화면 (선택 시) -->
+    <div id="inspection-detail-view" style="display:none">
+        <div class="card">
+            <div class="section-header">
+                <div>
+                    <div class="section-title" id="detail-title">-</div>
+                    <div style="font-size:0.8rem;color:var(--gray-500);margin-top:4px" id="detail-meta">-</div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button onclick="saveAllItems()" class="btn btn-success btn-sm">💾 전체 저장</button>
+                    <button onclick="syncNewLaws()" class="btn btn-primary btn-sm">🔄 법령 동기화</button>
+                    <button onclick="refreshInspectionItems()" class="btn btn-warning btn-sm">🔄 변경사항 새로고침</button>
+                    <button onclick="completeInspection()" class="btn btn-primary btn-sm">✅ 점검 완료</button>
+                    <button onclick="goToReportTab()" class="btn btn-secondary btn-sm">📋 보고서 생성</button>
+                    <button onclick="closeInspectionDetail()" class="btn btn-secondary btn-sm">← 목록으로</button>
+                </div>
+            </div>
+
+            <!-- 진행률 -->
+            <div style="background:var(--gray-50);padding:16px;border-radius:10px;margin-bottom:20px">
+                <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:0.85rem">
+                    <span>점검 진행률</span>
+                    <span id="detail-progress-text">0 / 0</span>
+                </div>
+                <div class="progress-bar-wrap">
+                    <div class="progress-bar" id="detail-progress-bar" style="width:0%"></div>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table class="inspection-table">
+                    <thead>
+                        <tr>
+                            <th style="min-width:180px">법령명</th>
+                            <th style="min-width:80px">소관부처</th>
+                            <th style="min-width:80px">공포일</th>
+                            <th style="min-width:80px">시행일</th>
+                            <th style="min-width:80px">개정구분</th>
+                            <th style="min-width:100px">담당자</th>
+                            <th style="min-width:80px">담당부서</th>
+                            <th style="min-width:70px">조치필요</th>
+                            <th style="min-width:200px">조치내용</th>
+                            <th style="min-width:80px">완료여부</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inspectionItemsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- 4. 보고서 -->
+<!-- ═══════════════════════════════════════ -->
+<div id="report" class="tab-content">
+    <div class="card">
+        <div class="section-header">
+            <span class="section-title">📋 분기점검 보고서</span>
+        </div>
+        <div class="form-row" style="align-items:flex-end">
+            <div class="form-group" style="flex:1">
+                <label>점검 기간 선택</label>
+                <select id="reportInspectionSelect" class="form-control">
+                    <option value="">-- 보고서를 생성할 분기점검을 선택하세요 --</option>
+                </select>
+            </div>
+            <div class="form-group" style="flex:0 0 auto">
+                <label>&nbsp;</label>
+                <button onclick="generateReport()" class="btn btn-primary">📋 보고서 생성</button>
+            </div>
+            <div class="form-group" style="flex:0 0 auto">
+                <label>&nbsp;</label>
+                <button onclick="printReport()" class="btn btn-secondary" id="printBtn" style="display:none">🖨️ 출력/PDF저장</button>
+            </div>
+        </div>
+    </div>
+    <div id="reportOutput"></div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- 5. 관리 -->
+<!-- ═══════════════════════════════════════ -->
+<div id="admin" class="tab-content">
+    <div class="card">
+        <div class="card-title">🔄 법령 변경사항 수집</div>
+        <p style="color:var(--gray-500);margin-bottom:16px;line-height:1.6;">
+            법제처 API에서 해당 기간 내 모니터링 중인 법령의 개정 정보를 수집합니다.<br>
+            <strong>타법개정, 시행일, 공포일</strong> 모두 수집됩니다.
+        </p>
+        <div class="form-row" style="margin-bottom:16px;align-items:flex-end">
+            <div class="form-group">
+                <label>수집 시작일</label>
+                <input type="date" id="batchStartDate" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>수집 종료일</label>
+                <input type="date" id="batchEndDate" class="form-control">
+            </div>
+        </div>
+        <div style="background:#e0e7ff;padding:12px;border-radius:8px;font-size:0.85rem;color:#3730a3;margin-bottom:16px">
+            ⚠️ 범위가 넓을수록 시간이 오래 걸릴 수 있습니다. <strong>쪹 실행시 1년, 이후는 3개월단위</strong>로 수집하는 것을 권장합니다.
+        </div>
+        <div id="batchStatus" style="display:none;background:#fef3c7;padding:14px;border-radius:8px;margin-bottom:16px;">
+            <p style="color:#92400e;font-weight:600;">🔄 날짜별 스캔 중... (수분 소요)</p>
+        </div>
+        <div id="batchResult" style="display:none;padding:14px;border-radius:8px;margin-bottom:16px;"></div>
+        <button id="collectChangesBtn" onclick="collectLawChanges()" class="btn btn-primary">🔄 변경사항 수집 실행</button>
+    </div>
+
+    <div class="card">
+        <div class="card-title">🗓️ 시행일 업데이트</div>
+        <p style="color:var(--gray-500);margin-bottom:16px;line-height:1.6;">
+            기존에 수집된 데이터에 시행일이 누락된 경우 업데이트합니다.<br>
+            실행 후 분기점검에서 <strong>"편경사항 새로고침"</strong>을 누르세요.
+        </p>
+        <div id="enforcementStatus" style="display:none;background:#fef3c7;padding:14px;border-radius:8px;margin-bottom:16px;">
+            <p style="color:#92400e;font-weight:600;">🔄 시행일 업데이트 중...</p>
+        </div>
+        <div id="enforcementResult" style="display:none;padding:14px;border-radius:8px;margin-bottom:16px;"></div>
+        <button id="enforcementBtn" onclick="updateEnforcementDates()" class="btn btn-secondary">🗓️ 시행일 업데이트</button>
+    </div>
+
+    <div class="card">
+        <div class="card-title">📊 시스템 현황</div>
+        <div class="stats-grid" style="margin-bottom:0">
+            <div class="stat-card">
+                <div class="stat-label">모니터링 법령</div>
+                <div class="stat-value" id="admin-stat-laws">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">수집된 변경사항</div>
+                <div class="stat-value" id="admin-stat-changes">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">분기점검 횟수</div>
+                <div class="stat-value" id="admin-stat-inspections">-</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- 모달: 새 분기점검 생성 -->
+<!-- ═══════════════════════════════════════ -->
+<div id="createInspectionModal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal('createInspectionModal')">×</button>
+        <div class="modal-title">➕ 새 분기점검 생성</div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>연도</label>
+                <select id="newYear" class="form-control"></select>
+            </div>
+            <div class="form-group">
+                <label>분기</label>
+                <select id="newQuarter" class="form-control">
+                    <option value="1">1분기 (1~3월)</option>
+                    <option value="2">2분기 (4~6월)</option>
+                    <option value="3">3분기 (7~9월)</option>
+                    <option value="4">4분기 (10~12월)</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group" style="margin-bottom:16px">
+            <label>작성자</label>
+            <input type="text" id="newCreatedBy" class="form-control" placeholder="이름 입력">
+        </div>
+        <div style="background:var(--gray-50);padding:14px;border-radius:8px;font-size:0.85rem;color:var(--gray-500);margin-bottom:16px;">
+            💡 생성하면 현재 모니터링 중인 법령 전체가 자동으로 점검 목록에 추가됩니다.
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeModal('createInspectionModal')" class="btn btn-secondary">취소</button>
+            <button onclick="createInspection()" class="btn btn-primary">✅ 생성</button>
+        </div>
+    </div>
+</div>
+
+<!-- 모달: 법령 직접 추가 -->
+<div id="addLawModal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal('addLawModal')">×</button>
+        <div class="modal-title">✏️ 법령 직접 추가</div>
+        <div style="background:#e0e7ff;padding:12px;border-radius:8px;font-size:0.83rem;color:#3730a3;margin-bottom:16px;">
+            💡 법령ID는 <a href="https://www.law.go.kr" target="_blank" style="color:#4f46e5;font-weight:600;">law.go.kr</a> 에서 법령 검색 후 URL의 <code>lsiSeq</code> 값을 입력하세요.<br>
+            (없으면 법령명을 그대로 입력해도 됩니다)
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+            <label>법령명 <span style="color:red">*</span></label>
+            <input type="text" id="addLawName" class="form-control" placeholder="예: 산업안전보건법">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>소관부처</label>
+                <input type="text" id="addLawMinistry" class="form-control" placeholder="예: 고용노동부">
+            </div>
+            <div class="form-group">
+                <label>법령구분</label>
+                <select id="addLawType" class="form-control">
+                    <option value="법률">법률</option>
+                    <option value="대통령령">대통령령</option>
+                    <option value="부령">부령</option>
+                    <option value="규칙">규칙</option>
+                    <option value="고시">고시</option>
+                    <option value="기타">기타</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>법령ID (lsiSeq)</label>
+                <input type="text" id="addLawId" class="form-control" placeholder="예: 123456 (없으면 비워두세요)">
+            </div>
+            <div class="form-group">
+                <label>법령일련번호 (MST)</label>
+                <input type="text" id="addLawSerial" class="form-control" placeholder="선택사항">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeModal('addLawModal')" class="btn btn-secondary">취소</button>
+            <button onclick="addLawDirectly()" class="btn btn-success">✅ 추가</button>
+        </div>
+    </div>
+</div>
+
+<!-- 모달: 개정이유 상세보기 -->
+<div id="revisionDetailModal" class="modal">
+    <div class="modal-content" style="max-width:700px">
+        <button class="modal-close" onclick="closeModal('revisionDetailModal')">×</button>
+        <div class="modal-title">📄 개정이유 상세</div>
+        <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:12px 16px;margin-bottom:16px">
+            <div style="font-size:0.8rem;color:#92400e;margin-bottom:4px">법령명</div>
+            <div id="revisionDetailLawName" style="font-size:1rem;font-weight:700;color:#78350f"></div>
+        </div>
+        <div style="margin-bottom:12px">
+            <div style="font-size:0.85rem;font-weight:600;color:var(--gray-700);margin-bottom:8px">📋 개정이유 원문</div>
+            <div id="revisionDetailContent"
+                 style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:16px;
+                        font-size:0.875rem;line-height:1.8;color:var(--gray-700);
+                        max-height:400px;overflow-y:auto;white-space:pre-wrap;word-break:keep-all">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <a id="revisionDetailLawLink" href="#" target="_blank" class="btn btn-primary">
+                📖 법제처에서 전문 보기
+            </a>
+            <button onclick="closeModal('revisionDetailModal')" class="btn btn-secondary">닫기</button>
+        </div>
+    </div>
+</div>
+
+<!-- 로딩 오버레이 -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div style="text-align:center">
+        <div class="spinner"></div>
+        <p style="margin-top:12px;color:var(--gray-700);font-weight:600">처리 중...</p>
+    </div>
+</div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script src="quarterlyInspection.js"></script>
+<script src="adminBatch.js"></script>
+</body>
+</html>
