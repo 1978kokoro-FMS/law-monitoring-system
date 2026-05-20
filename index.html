@@ -292,7 +292,15 @@
         <div class="form-row">
             <div class="form-group" style="flex:2">
                 <label>법령명 검색</label>
-                <input type="text" id="lawSearchInput" class="form-control" placeholder="예: 산업안전보건법, 중대재해처벌법" onkeypress="if(event.key==='Enter') searchLawAPI()">
+                <input type="text" id="lawSearchInput" class="form-control" placeholder="예: 산업안전보건법, 중대재해처보건안전지침" onkeypress="if(event.key==='Enter') searchLawAPI()">
+            </div>
+            <div class="form-group" style="flex:0 0 160px">
+                <label>검색 범위</label>
+                <select id="lawSearchTarget" class="form-control">
+                    <option value="law">⚖️ 법령 (법률·대통령령·부령)</option>
+                    <option value="admrul">📌 행정규칙 (고시·지침·훈령·예규)</option>
+                    <option value="ordin">🏢 자치법규 (조례·규칙)</option>
+                </select>
             </div>
             <div class="form-group" style="flex:0 0 auto; justify-content:flex-end;">
                 <label>&nbsp;</label>

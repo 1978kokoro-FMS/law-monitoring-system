@@ -226,7 +226,8 @@ async function searchLawAPI() {
     container.innerHTML = '<p style="color:var(--gray-500);padding:12px">검색 중...</p>';
 
     try {
-        const res = await fetch(`/api/law/search?query=${encodeURIComponent(keyword)}`);
+        const target = document.getElementById('lawSearchTarget')?.value || 'law';
+        const res = await fetch(`/api/law/search?query=${encodeURIComponent(keyword)}&target=${target}`);
         if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
         const xml = await res.text();
 

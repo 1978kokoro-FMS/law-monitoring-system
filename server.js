@@ -18,10 +18,10 @@ app.use(express.json());
 // 법령 검색
 app.get('/api/law/search', async (req, res) => {
     try {
-        const { query } = req.query;
+        const { query, target = 'law' } = req.query;
         if (!query) return res.status(400).json({ error: '검색어를 입력해주세요.' });
         const response = await axios.get('https://www.law.go.kr/DRF/lawSearch.do', {
-            params: { OC: LAW_API_KEY, target: 'law', type: 'XML', query }
+            params: { OC: LAW_API_KEY, target, type: 'XML', query }
         });
         res.set('Content-Type', 'application/xml; charset=utf-8');
         res.send(response.data);
